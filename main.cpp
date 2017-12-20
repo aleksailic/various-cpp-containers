@@ -1,346 +1,223 @@
 #include <iostream>
-/*
-template<class T>
-class Iter {
-private:
-	virtual Iter& next() = 0;
+#include "List.h"
+#include "SList.h"
+#include "BST.h"
+#include "Skup.h"
+#include "PerformanceCalculator.h"
 
-public:
-	Iter()=default;
-	virtual ~Iter() {};
-
-	Iter& operator++() { next(); }
-	virtual Iter& begin() = 0;
-	virtual Iter& end() = 0;
-	
-	virtual T* operator->() = 0;
-	T& operator*(){ *operator->(); }
-};*/
-
-template <class T>
-class Container {
-	virtual void kopiraj(const Container& c) {}
-	virtual void premesti(Container&& c) {}
-	virtual void brisi() {}
-	virtual void print(std::ostream& os){}
-protected:
-	unsigned int length;
-public:
-	Container() :length() {}
-	Container(const Container& c) :Container() { kopiraj(c); }
-	Container(Container && c) :Container() { premesti(c); }
-	virtual ~Container(){ brisi(); }
-
-	int getLength() { return length; }
-	bool empty() { return length ? 1 : 0; }
-
-	virtual void append(const T& el) = 0; //stavi na kraj
-	virtual void prepend(const T& el) = 0; //stavi na pocetak
-	virtual T pop() = 0; //uzmi s kraja
-	virtual T fetch(unsigned int) = 0; //uzmi element po nekom redu
-	virtual bool has(const T& el) = 0; // da li lista poseduje element
-	virtual void remove(const T& el) = 0; //brise element T
-	void erase() { brisi(); } //pozvace virtuelnu i samo ce se srediti!
-
-	virtual void forEach(void(*fn)(T& el)) = 0; //za svaki element pozovi funkciju fn
-
-	Container& operator=(const Container&c) {
-		if (this != &c) {
-			brisi();
-			kopiraj(c);
-		}
-		return *this;
-	}
-	Container& operator=(Container && c) {
-		if (this != &c) {
-			brisi();
-			premesti(c);
-		}
-		return *this;
-	}
-	Container& operator+=(const T& el) { append(el); return *this; }
-	Container& operator--() { pop(); return *this; }
-	T operator[](unsigned int i) {
-		return fetch(i);
-	}
-	friend std::ostream& operator<<(std::ostream& os, Container& c) {
-		c.print(os);
-		return os;
-	}
-};
-
-
-template<class T>
-class List :public Container<T> {
-protected:
-	struct Node {
-		T data;
-		Node*nxt;
-
-		Node() = delete;
-		Node(const T&el) :data(el), nxt(nullptr) {}
-	};
-	Node * front;
-	Node * rear;
-
-	virtual void insertNode(Node* prev, Node* curr) {
-		length++;
-		if (!prev) { // umece se na mestu prvog
-			curr->nxt = front;
-			front = curr;
-		}
-		else {
-			curr->nxt = prev->nxt;
-			prev->nxt = curr;
-		}
-		if (!rear || !curr->nxt)
-			rear = curr;
-	}
-	virtual Node* getPrevNode(Node *nd) const {
-		if (!front)return nullptr;
-		if (nd == front) return nullptr;
-
-		Node*itr = front;
-		for (; itr->nxt != nd && itr->nxt != nullptr; itr = itr->nxt);
-		return itr;
-	}
-	virtual void removeNode(Node * nd) {
-		if (!nd) return;
-		length--;
-		Node * prev = getPrevNode(nd);
-
-		if (prev)
-			prev->nxt = nd->nxt;
-		else
-			front = nd->nxt;
-
-		if (rear == nd) rear = prev;
-		delete nd;
-	}
-	virtual Node* findNode(const T& el) const {
-		for (Node*itr = front; itr != nullptr; itr = itr->nxt)
-			if (itr->data == el)
-				return itr;
-		return nullptr;
-	}
-	Node* getNodeById(unsigned int id) {
-		Node*itr = front;
-		for (unsigned int i = 0; i < id; i++)
-			itr = itr ? itr->nxt : nullptr;
-		return itr;
-	}
-private:
-	virtual void kopiraj(const Container&c) {
-		const List& l = dynamic_cast<const List&>(c);
-		for (Node* itr = l.front; itr != nullptr; itr = itr->nxt)
-			append(itr->data);
-	}
-	virtual void brisi() {
-		rear = nullptr;
-		length = 0;
-		while (front) {
-			Node * toDelete = front;
-			front = front->nxt;
-			delete toDelete;
-		}
-	}
-	virtual void premesti(Container&&c) {
-		List& l = dynamic_cast<List&>(c);
-		front = l.front;
-		rear = l.rear;
-		length = l.length;
-
-		l.front = nullptr; //samo front je dovoljan
-	}
-	virtual void print(std::ostream& os) {
-		os << "List(" << length << "):{";
-		forEach([](T& data) { //TO DO: CHANGE THIS!!
-			std::cout << data << ", ";
-		});
-		os << '}' << std::endl;
-	}
-public:
-	List() = default;
-	List(std::initializer_list<T> lst) { //Lakse se je inicijalizovati inicijalizatorskom listom
-		for (auto el : lst)
-			append(el);
-	}
-	List(const List&l) { kopiraj(l); }
-	List(List && l) { premesti(l); }
-
-	virtual ~List() { brisi(); }//preuzmi destruktor
-
-	void append(const T& el) {
-		Node*nd = new Node(el);
-		insertNode(rear, nd);
-	}
-	void prepend(const T&el) {
-		Node*nd = new Node(el);
-		insertNode(nullptr, nd);
-	}
-	T pop() {
-		T data = rear->data;
-		removeNode(rear);
-		return data;
-	}
-	void remove(const T&data) { removeNode(findNode(data)); }
-	bool has(const T& data) { return findNode(data) ? 1 : 0; }
-	T fetch(unsigned int id) {
-		if (id >= length) return T();
-		Node * el = getNodeById(id);
-		return el ? el->data : T();
-	}
-
-	void forEach(void(*fn)(T& data)) {
-		for (Node*itr = front; itr != nullptr; itr = itr->nxt)
-			fn(itr->data);
-	}
-};
-
-template<class T>
-class Stack : List<T> {
-private:
-public:
-	using List::getLength;
-	using List::pop;
-	using List::erase;
-	using List::empty;
-	void push(const T& el) { append(el); }
-
-	Stack(const Stack&s){kopiraj(s);}
-	Stack(Stack&&s) { premesti(s); }
-	Stack() = default;
-	Stack(std::initializer_list<T> lst) { for (auto el : lst) append(el); }
-};
-
-
-
-template<class T>
-class BST_Iter :public Iter {
-private:
-	Stack<BST<T>::Node*> stack;
-public:
-
-
-};
-
-template<class T>
-class BST {
-protected:
-	struct Node {
-		Node*left;
-		Node*right;
-		T data;
-
-		Node() = delete;
-		Node(T& cdata) :data(cdata), left(nullptr), right(nullptr) {}
-	};
-	Node*root;
-
-	class Iter {
-		Stack<Node*> s;
-		Node* curr;
-		Node* nxt;
-
-		void kopiraj(const Iter& rhs) {
-			curr = rhs.curr;
-			nxt = rhs.nxt;
-			s = rhs.s;
-		}
-		void brisi() {
-			s.erase();
-		}
-	public:
-		Iter() = default;
-		Iter(Node*start) :nxt(start) {}
-		Iter(const Iter& itr) { kopiraj(itr); }
-		Iter& operator++() {
-			while (nxt) { //idi skroz levo dok mozes
-				s.push(nxt);
-				nxt = nxt->left;
-			}
-			if (!s.empty()) {
-				nxt = s.pop();
-				curr = nxt;
-				nxt = nxt->right;
-			}else
-				curr=nullptr //dosli smo do kraja
-			return *this;
-		}
-		bool operator==(const Iter& rhs) { return curr == rhs.curr ? 1 : 0; }
-		T* operator->() { return &(curr->data); }
-		T& operator*() { return *operator->(); }
-		Iter& operator=(const Iter& rhs) {
-			if (this != &rhs) {
-				brisi();
-				kopiraj(rhs);
-			}
-			return *this;
-		}
-	};
-
-	Iter begin() { return Iter(root); }
-	Iter end() { return Iter(nullptr); }
-
-	void traverse(void(*fn)(Node**nd)) {
-	}
-private:
-	virtual void kopiraj(const Container&c) {
-		traverse([](Node**nd) {
-			append(*nd);
-		});
-	}
-	virtual void brisi() {
-		traverse([](Node**nd) {
-			delete *nd;
-			*nd = nullptr;
-		})
-		root = nullptr;
-	}
-	virtual void premesti(Container&&c) {
-		BST& b = dynamic_cast<BST&>(c);
-		root = b.root;
-		b.root = nullptr;
-	}
-	virtual void print(std::ostream& os) {
-		os << "BST(" << length << "):{";
-		traverse([](Node ** nd) { //TO DO: CHANGE THIS!!
-			std::cout << (*nd)->data << ", ";
-		});
-		os << '}' << std::endl;
-	}
-public:
-	BST() = default;
-	BST(const BST& b) { kopiraj(b); }
-	BST(BST && b) { premesti(b); }
-	~BST() { brisi(); }
-
-	void append(const T& el) {
-		Node*nd = new Node(el);
-		if (!root)
-
-	}//stavi na kraj
-	void prepend(const T& el) = 0; //stavi na pocetak
-	void pop() = 0; //uzmi s kraja
-	bool has(const T& el) = 0; // da li lista poseduje element
-	void remove(const T& el) = 0; //brise element T
-
-	void forEach(void(*fn)(T& el)){
-		for (auto itr = begin(); itr != end(); ++itr) {
-			fn(itr->data);
-		}
-	}
-};
-
-
-
-
+#include <random>
+#undef max
 
 using namespace std;
-int main(int argc, int **argv) {
-	List<int> l{ 10,20,30,40,50 };
 
-	Stack<int> s;
+typedef Skup<int, BST<int>> BST_Skup;
+typedef Skup<int> List_Skup;
+
+struct perf {
+	int vel;
+	double formiranje;
+	double umetanje;
+	double brisanje;
+	double pretraga;
+	double operacija;
+
+	bool operator==(const perf& rhs) { return vel == rhs.vel; }
+};
+
+void printPerf(List<perf>& pf) {
+	cout << endl << "velicina\t";   pf.forEach([](perf& p) {cout << p.vel << "\t\t"; });
+	cout << endl << "formiranje\t"; pf.forEach([](perf& p) {cout << p.formiranje << '\t'; });
+	cout << endl << "umetanje\t";   pf.forEach([](perf& p) {cout << p.umetanje << '\t'; });
+	cout << endl << "brisanje\t";   pf.forEach([](perf& p) {cout << p.brisanje << '\t'; });
+	cout << endl << "pretraga\t";   pf.forEach([](perf& p) {cout << p.pretraga << '\t'; });
+	cout << endl << "operacija\t";  pf.forEach([](perf& p) {cout << p.operacija << "\t\t"; });
+	cout << endl;
+}
+
+int generateRandom(int low=-1000000, int high= 1000000) {
+	std::random_device seed;
+	std::mt19937 gen(seed());
+	std::uniform_int_distribution<int> dist(low, high);
+
+	return dist(gen);
+}
+
+int * generateRandomArr(int size) {
+	int*randNiz = new int[size];
+	for (int i = 0; i < size; i++)
+		randNiz[i] = generateRandom();
+
+	return randNiz;
+}
+void getPerformanceData() {
+	PerformanceCalculator pc;
+	
+		//int vel_arr[]={ 200,500,1000,10000,100000,1000000 };
+	int vel_arr[] = { 20,500,1000,10000 };
+
+	List<perf> lst_valList;
+	List<perf> bst_valList;
+
+	for (int vel:vel_arr) {
+		perf lst_perf,bst_perf;
+		lst_perf.vel = bst_perf.vel =vel;
+		double lst_vals[3];
+		double bst_vals[3];
+		int * randNiz = nullptr;
+		
+		List_Skup lSkup;
+		BST_Skup bSkup;
+
+		// FORMIRANJE
+		for (int j = 0; j < 3; j++) {
+			randNiz = generateRandomArr(vel);
+			bSkup.erase();
+			lSkup.erase();
+
+			pc.start();
+			for (int i = 0; i < vel; i++)
+				lSkup.add(randNiz[i]);
+			pc.stop();
+			lst_vals[j] = pc.elapsedMillis();
+
+			pc.start();
+			for (int i = 0; i < vel; i++)
+				bSkup.add(randNiz[i]);
+				
+			pc.stop();
+			bst_vals[j] = pc.elapsedMillis();
+
+			delete[] randNiz;
+		}
+		lst_perf.formiranje = (lst_vals[0] + lst_vals[1] + lst_vals[2]) / 3;
+		bst_perf.formiranje = (bst_vals[0] + bst_vals[1] + bst_vals[2]) / 3;
+
+		// UMETANJE
+		randNiz = generateRandomArr(3);
+		for (int j = 0; j < 3; j++) {
+			pc.start();
+			lSkup.add(randNiz[j]);
+			pc.stop();
+			lst_vals[j] = pc.elapsedMillis();
+
+			pc.start();
+			bSkup.add(randNiz[j]);
+			pc.stop();
+
+			bst_vals[j] = pc.elapsedMillis();
+		}
+		lst_perf.umetanje = (lst_vals[0] + lst_vals[1] + lst_vals[2]) / 3;
+		bst_perf.umetanje = (bst_vals[0] + bst_vals[1] + bst_vals[2]) / 3;
+		delete[] randNiz;
+
+		// BRISANJE
+		for (int j = 0; j < 3; j++) {
+			int rnd = generateRandom(0, vel - 1);
+			rnd = lSkup[rnd]; //ovako je element sigurno u skupu
+
+			pc.start();
+			lSkup.remove(rnd);
+			pc.stop();
+			lst_vals[j] = pc.elapsedMillis();
+
+			pc.start();
+			bSkup.add(rnd);
+			pc.stop();
+			bst_vals[j] = pc.elapsedMillis();
+		}
+		lst_perf.brisanje = (lst_vals[0] + lst_vals[1] + lst_vals[2]) / 3;
+		bst_perf.brisanje = (bst_vals[0] + bst_vals[1] + bst_vals[2]) / 3;
+
+		// PRETRAGA
+		randNiz = generateRandomArr(3);
+		for (int j = 0; j < 3; j++) {
+			pc.start();
+			lSkup.has(randNiz[j]);
+			pc.stop();
+			lst_vals[j] = pc.elapsedMillis();
+
+			pc.start();
+			bSkup.has(randNiz[j]);
+			pc.stop();
+
+			bst_vals[j] = pc.elapsedMillis();
+		}
+		lst_perf.pretraga = (lst_vals[0] + lst_vals[1] + lst_vals[2]) / 3;
+		bst_perf.pretraga = (bst_vals[0] + bst_vals[1] + bst_vals[2]) / 3;
+		delete[] randNiz;
+
+		// OPERACIJA
+		randNiz = generateRandomArr(vel);
+		for (int j = 0; j < 3; j++) {
+			List_Skup lSkup2(lSkup);
+			BST_Skup bSkup2(bSkup);
+			for (int i = 0; i < vel; i++) {
+				bSkup2.add(randNiz[i]);
+				lSkup2.add(randNiz[i]);
+			}
+
+			pc.start();
+			List_Skup& lSkup3 = lSkup / lSkup2;
+			pc.stop();
+			delete &lSkup3;
+			lst_vals[j] = pc.elapsedMillis();
+
+			pc.start();
+			BST_Skup& bSkup3 = bSkup / bSkup2;
+			pc.stop();
+			delete &bSkup3;
+			bst_vals[j] = pc.elapsedMillis();
+		}
+		lst_perf.operacija = (lst_vals[0] + lst_vals[1] + lst_vals[2]) / 3;
+		bst_perf.operacija = (bst_vals[0] + bst_vals[1] + bst_vals[2]) / 3;
+		delete[] randNiz;
+
+		lst_valList.add(lst_perf);
+		bst_valList.add(bst_perf);
+	}
+	
+	cout << endl<< "Procena BSTSkupa";
+	printPerf(bst_valList);
+
+	cout << endl<< "Procena ListSkupa";
+	printPerf(lst_valList);
+}
+
+int main(int argc, int **argv) {
+	/*
+	List<int> l{ 20,10,50,40,30 };
+	SList<int> sl(l);
+
+	l += 34;
+	l += 55;
+	sl += 34;
+	sl += 55;
+
+	cout << l;
+	cout << sl;
+
+	BST<int> b{ 16,11,19,5,12,17,29,6,21,26,25,27 };
+	cout << b << endl;
+	b.remove(19);
+
+	cout << b;
+
+	BST_Skup sBST1(new BST<int>(b));
+	BST_Skup sBST2(new BST<int>{5,12,98});
+
+	BST_Skup& sBST3=sBST1/sBST2;
+	BST_Skup& sBST4 = sBST1+sBST2;
+	BST_Skup& sBST5 = BST_Skup::presek(sBST1, sBST2);
+
+	cout << "razlika skupova\nsBST1: \t"<<sBST1 << "sBST2: \t"<<sBST2<<"je: \t"<<sBST3<<endl;
+	cout << "unija skupova\nsBST1: \t" << sBST1 << "sBST2: \t" << sBST2 << "je: \t" << sBST4<<endl;
+	cout << "presek skupova\nsBST1: \t" << sBST1 << "sBST2: \t" << sBST2 << "je: \t" << sBST5;
+
+	delete &sBST3;
+	delete &sBST4;
+	delete &sBST5;
+	*/
+	getPerformanceData();
 
 	system("pause");
 	return 0;
