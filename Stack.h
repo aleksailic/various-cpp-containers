@@ -1,14 +1,14 @@
 #pragma once
 #include "List.h"
-template<class T>
-class Stack :private List<T>
-{
-const char* name = "Stack";
+#include "Vector.h"
+
+template<class T,class C= List<T>>
+class Stack :private C{
 public:
-	using List::getLength;
-	using List::pop;
-	using List::erase;
-	using List::empty;
+	using C::getLength;
+	using C::pop;
+	using C::erase;
+	using C::empty;
 	void push(const T& el) { add(el); }
 
 	Stack(const Stack&s) { kopiraj(s); }

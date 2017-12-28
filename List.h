@@ -14,11 +14,6 @@ protected:
 	Node * front;
 	Node * rear;
 
-	mutable struct { //Kako bi operacije brisanja i pronalaska prethodnog bile optimalne ukoliko se pozivaju na prethodno korisceni element
-		Node * el = nullptr;
-		Node * parent = nullptr;
-	}lastAccessed;
-
 	class L_iter : public Iter<T> {
 		Node* curr;
 
@@ -34,6 +29,7 @@ protected:
 			curr = curr->nxt;
 			return *this;
 		}
+
 
 		bool operator==(const Iter<T>& rhs) { const L_iter& lst = dynamic_cast<const L_iter&>(rhs); return curr == lst.curr ? 1 : 0; }
 		T* operator->() { return &(curr->data); }
@@ -62,7 +58,6 @@ protected:
 	virtual Node* getPrevNode(Node *nd) const {
 		if (!front)return nullptr;
 		if (nd == front) return nullptr;
-		if (nd == lastAccessed.el) return lastAccessed.parent;
 
 		Node*itr = front;
 		for (; itr->nxt != nd && itr->nxt != nullptr; itr = itr->nxt);
@@ -82,27 +77,16 @@ protected:
 		delete nd;
 	}
 	virtual Node* findNode(const T& el) const {
-		if (lastAccessed.el && lastAccessed.el->data == el)
-			return lastAccessed.el;
-
-		lastAccessed.parent = nullptr;
 		for (Node*itr = front; itr != nullptr; itr = itr->nxt)
 			if (itr->data == el)
-				return lastAccessed.el = itr;
-			else
-				lastAccessed.parent = itr;
-
+				return itr;
 		return nullptr;
 	}
 	Node* getNodeById(unsigned int id)const {
 		Node*itr = front;
-		lastAccessed.parent = nullptr;
-		for (unsigned int i = 0; i < id; i++) {
-			lastAccessed.parent = itr;
+		for (unsigned int i = 0; i < id; i++)
 			itr = itr ? itr->nxt : nullptr;
-		}
-			
-		return lastAccessed.el=itr;
+		return itr;
 	}
 
 	virtual void kopiraj(const Container&c) {
@@ -128,11 +112,11 @@ protected:
 		l.front = nullptr; //samo front je dovoljan
 	}
 	virtual void print(std::ostream& os) {
-		/*os << "List" <<"(" << length << "):{";
+		os << "List" <<"(" << length << "):{";
 		for (auto itr = begin(); itr != end(); ++itr) {
 			os << *itr << ", ";
 		}
-		os << '}' << std::endl;*/
+		os << '}' << std::endl;
 	}
 public:
 	List() = default;
@@ -168,11 +152,6 @@ public:
 		if (id >= length) return T();
 		Node * el = getNodeById(id);
 		return el ? el->data : T();
-	}
-
-	void forEach(void(*fn)(T& data)) {
-		for (Node*itr = front; itr != nullptr; itr = itr->nxt)
-			fn(itr->data);
 	}
 
 	L_iter begin() {

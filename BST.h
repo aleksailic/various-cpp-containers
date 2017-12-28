@@ -1,8 +1,7 @@
 #pragma once
 #include "Container.h"
 #include "Stack.h"
-
-
+#include "PQ.h"
 
 template <class T>
 class BST : public Container<T>
@@ -18,16 +17,15 @@ protected:
 	};
 	Node*root;
 
-
 	mutable struct{ //Kako bi operacije brisanja i pronalaska prethodnog bile optimalne ukoliko se pozivaju na prethodno korisceni element
 		Node * el=nullptr;
 		Node * parent=nullptr;
 	}lastAccessed;
 
 	class BST_iter : public Iter<T> {
-		Stack<Node*> s;
 		Node* curr;
 		Node* nxt;
+		Stack<Node*>s;
 
 		void kopiraj(const Iter<T>& rhs) {
 			const BST_iter& bst = dynamic_cast<const BST_iter&>(rhs);
@@ -35,11 +33,9 @@ protected:
 			nxt = bst.nxt;
 			s = bst.s;
 		}
-		void brisi() {s.erase();}
 	public:
-		BST_iter(Node*start) :nxt(start),curr(nullptr), s() { if (nxt)next(); }
+		BST_iter(Node*start) :nxt(start), curr(nullptr), s() { if (nxt)next(); }
 		BST_iter(const BST_iter& itr) { kopiraj(itr); }
-
 
 		Iter<T>& next() {
 			while (nxt) { //idi skroz levo dok mozes
@@ -79,21 +75,30 @@ private:
 	virtual void kopiraj(const Container&c) {
 		const BST& cb = dynamic_cast<const BST&>(c);
 		BST& b = const_cast<BST&>(cb);
-		for (auto itr = b.begin(); itr != b.end(); ++itr)
-			add(*itr);
+		
+		PQ<Node*> pq{ b.root };
+		while (!pq.empty()) {
+			Node * nd = pq.dequeue();
+			add(nd->data);
+			if (nd->left)
+				pq.enqueue(nd->left);
+			if (nd->right)
+				pq.enqueue(nd->right);
+		}
 	}
-	virtual void brisi() {
+	virtual void brisi(){
 		for (auto itr = begin(); itr != end(); ++itr)
 			~itr;
 		root = nullptr;
 		length = 0;
 	}
-	virtual void premesti(Container&&c) {
+	virtual void premesti(Container&&c){
 		BST& b = dynamic_cast<BST&>(c);
 		root = b.root;
 		b.root = nullptr;
+		length = b.length;
 	}
-	virtual void print(std::ostream& os) {
+	virtual void print(std::ostream& os){
 		os << "BST(" << length << "):{";
 		for (auto itr = begin(); itr != end(); ++itr) {
 			os << *itr << ", ";
@@ -126,6 +131,7 @@ private:
 		lastAccessed.el = el;
 	}
 	Node* getPrev(Node * el)const {
+		if (!el) throw Exception("Ne moze se naci prethodnik nullptr-a");
 		if (lastAccessed.el == el)
 			return lastAccessed.parent;
 
@@ -144,11 +150,14 @@ private:
 		if (before && after->data == el->data)
 			return before;
 		else
-			//ERROR
-			return nullptr;
+			return nullptr; //ako ne postoji vracamo nullptr s'ces
 	}
 	void removeNode(Node *el) { removeNode(getPrev(el), el); }
 	void removeNode(Node * prev, Node * el) {
+		if (!el) {
+			throw Exception("Element is not there!");
+			return;
+		}
 		Node* toSwap = nullptr;
 		if (!el->left)
 			toSwap = el->right;
@@ -215,7 +224,10 @@ public:
 
 	void add(const T& el) { addNode(new Node(el)); }
 	T pop() {
-		if (!root) return T(); //ERROR
+		if (!root) {
+			throw Exception("Stablo je prazno");
+			return T(); //ERROR
+		}
 		Node*itr = root;
 		Node*el = nullptr;
 		Node*prev = nullptr;
@@ -233,19 +245,16 @@ public:
 	bool has(const T& el) const { return findNode(el) ? 1 : 0; }
 	void remove(const T& el) { removeNode(findNode(el)); }
 	T fetch(unsigned int id){
-		if (id >= length) return T(); //ERROR
+		if (id >= length) {
+			throw Exception("Indeks prelazi opseg stabla");
+			return T();
+		}
 
 		int i = 0;
 		for (auto itr = begin(); itr != end(); ++itr)
 			if (i++ == id)
 				return *itr;
 		return T(); // justincase
-	}
-
-	void forEach(void(*fn)(T& el)) {
-		for (auto itr = begin(); itr != end(); ++itr) {
-			fn(*itr);
-		}
 	}
 
 	BST_iter begin() { return BST_iter(root); }

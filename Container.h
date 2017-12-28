@@ -1,5 +1,6 @@
 #pragma once
 #include "Iter.h"
+#include "Exception.h"
 #include <iosfwd>
 
 template <class T>
@@ -25,9 +26,10 @@ public:
 	virtual bool has(const T& el)const = 0; // da li lista poseduje element
 	virtual void remove(const T& el) = 0; //brise element T
 	void erase() { brisi(); } //pozvace virtuelnu i samo ce se srediti!
-
-	virtual void forEach(void(*fn)(T& el)) = 0; //za svaki element pozovi funkciju fn
-
+	void removeRange(int low, int high) {
+		for (int i = low; i < high; i++)
+			if (has(i)) remove(i);
+	}	
 	Container& operator=(const Container&c) {
 		if (this != &c) {
 			brisi();
@@ -51,5 +53,4 @@ public:
 		c.print(os);
 		return os;
 	}
-
 };

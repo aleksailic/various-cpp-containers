@@ -11,6 +11,7 @@ private:
 		length = s.getLength();
 	}
 	void brisi() {
+		length = 0;
 		delete data;
 		data = new C;
 	}
@@ -46,10 +47,8 @@ public:
 	static Skup& razlika(const Skup&lhs, const Skup& rhs) {
 		Skup* toReturn = new Skup(lhs);
 		for (auto itr = rhs.data->begin(); itr != rhs.data->end(); ++itr)
-			if (toReturn->has(*itr))
+			if (lhs.data->has(*itr))
 				toReturn->remove(*itr);
-			else
-				toReturn->add(*itr);
 
 		return *toReturn;
 	}
@@ -80,3 +79,6 @@ public:
 	}
 
 };
+
+typedef Skup<int, BST<int>> BST_Skup;
+typedef Skup<int> List_Skup;
