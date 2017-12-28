@@ -13,5 +13,5 @@ This code compiles sucessfully on Microsoft's native Visual Studio compiler. Per
 benchmarking part of the code is windows dependant.
 
 
-Here is benchmark data in ms (in order of appearance: number of elements, formation, insertion, deletion, search, operation(diff)):
+Here is benchmark data for 'Set' container in ms (in order of appearance: number of elements, formation, insertion, deletion, search, operation(diff)):
 ![Performance image](/benchmark.jpg?raw=true "Performance image")
