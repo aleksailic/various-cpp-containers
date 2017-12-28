@@ -11,3 +11,7 @@ Benchmark class is here also implemented utilizing PerformanceCalculator class w
 
 This code compiles sucessfully on Microsoft's native Visual Studio compiler. PerformanceCalculator class is dependant on windows' headers so 
 benchmarking part of the code is windows dependant.
+
+
+Here is benchmark data in ms (in order of appearance: number of elements, formation, insertion, deletion, search, operation(diff)):
+![Performance image](/benchmark.jpg?raw=true "Performance image")
